@@ -1,0 +1,337 @@
+{
+  "name": "半導体株データ収集 → Claude分析 → Notion投稿",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 18,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "name": "毎日18時に実行",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// 半導体関連銘柄の定義\nconst stocks = [\n  // === 米国半導体株 ===\n  { symbol: 'NVDA',  name: 'NVIDIA',              market: 'US', category: 'GPU/AI半導体' },\n  { symbol: 'AMD',   name: 'AMD',                  market: 'US', category: 'CPU/GPU' },\n  { symbol: 'INTC',  name: 'Intel',                market: 'US', category: 'CPU/ファウンドリ' },\n  { symbol: 'TSM',   name: 'TSMC (ADR)',           market: 'US', category: 'ファウンドリ' },\n  { symbol: 'AVGO',  name: 'Broadcom',             market: 'US', category: '通信/インフラ半導体' },\n  { symbol: 'QCOM',  name: 'Qualcomm',             market: 'US', category: 'モバイル半導体' },\n  { symbol: 'TXN',   name: 'Texas Instruments',    market: 'US', category: 'アナログ半導体' },\n  { symbol: 'MU',    name: 'Micron Technology',    market: 'US', category: 'メモリ' },\n  { symbol: 'ASML',  name: 'ASML (ADR)',           market: 'US', category: '半導体製造装置' },\n  { symbol: 'LRCX',  name: 'Lam Research',         market: 'US', category: '半導体製造装置' },\n  { symbol: 'KLAC',  name: 'KLA Corporation',      market: 'US', category: '半導体検査装置' },\n  { symbol: 'AMAT',  name: 'Applied Materials',    market: 'US', category: '半導体製造装置' },\n  { symbol: 'MRVL',  name: 'Marvell Technology',   market: 'US', category: 'データインフラ半導体' },\n  { symbol: 'ON',    name: 'ON Semiconductor',     market: 'US', category: 'パワー半導体' },\n  { symbol: 'NXPI',  name: 'NXP Semiconductors',   market: 'US', category: '車載半導体' },\n  { symbol: 'ARM',   name: 'Arm Holdings (ADR)',   market: 'US', category: 'IPコア/設計' },\n  { symbol: 'SMCI',  name: 'Super Micro Computer', market: 'US', category: 'AIサーバー' },\n  // === 日本半導体株 ===\n  { symbol: '8035.T',  name: '東京エレクトロン',      market: 'JP', category: '半導体製造装置' },\n  { symbol: '6857.T',  name: 'アドバンテスト',        market: 'JP', category: '半導体検査装置' },\n  { symbol: '6920.T',  name: 'レーザーテック',        market: 'JP', category: '半導体検査装置' },\n  { symbol: '6723.T',  name: 'ルネサスエレクトロニクス', market: 'JP', category: '車載/産業半導体' },\n  { symbol: '4063.T',  name: '信越化学工業',          market: 'JP', category: 'シリコンウエハー' },\n  { symbol: '6526.T',  name: 'ソシオネクスト',        market: 'JP', category: 'SoC設計' },\n  { symbol: '6146.T',  name: 'ディスコ',              market: 'JP', category: '半導体切断/研磨装置' },\n  { symbol: '6963.T',  name: 'ローム',                market: 'JP', category: 'パワー半導体' },\n  { symbol: '6981.T',  name: '村田製作所',            market: 'JP', category: '電子部品' },\n  { symbol: '6594.T',  name: '日本電産(ニデック)',     market: 'JP', category: 'モーター/電子部品' }\n];\n\nreturn stocks.map(stock => ({ json: stock }));"
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000002",
+      "name": "半導体銘柄リスト定義",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 5,
+        "options": {
+          "reset": false
+        }
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000003",
+      "name": "バッチ処理 (5件ずつ)",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://query1.finance.yahoo.com/v8/finance/chart/{{ $json.symbol }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "interval", "value": "1d" },
+            { "name": "range", "value": "1mo" },
+            { "name": "includePrePost", "value": "false" }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "User-Agent", "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000004",
+      "name": "Yahoo Finance API取得",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [750, 200],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Yahoo Finance APIレスポンスからデータを抽出\nconst chart = $json?.chart?.result?.[0];\nconst meta = chart?.meta || {};\nconst indicators = chart?.indicators?.quote?.[0] || {};\nconst timestamps = chart?.timestamp || [];\n\n// 直近の取引データ\nconst lastIndex = timestamps.length - 1;\nconst prevIndex = lastIndex > 0 ? lastIndex - 1 : 0;\n\nconst currentPrice = meta.regularMarketPrice || indicators.close?.[lastIndex] || 0;\nconst previousClose = indicators.close?.[prevIndex] || meta.chartPreviousClose || 0;\nconst dailyChange = previousClose > 0 ? ((currentPrice - previousClose) / previousClose * 100).toFixed(2) : 'N/A';\n\n// 1ヶ月間の高値・安値\nconst highs = (indicators.high || []).filter(v => v !== null);\nconst lows = (indicators.low || []).filter(v => v !== null);\nconst volumes = (indicators.volume || []).filter(v => v !== null);\n\nconst monthHigh = highs.length > 0 ? Math.max(...highs).toFixed(2) : 'N/A';\nconst monthLow = lows.length > 0 ? Math.min(...lows).toFixed(2) : 'N/A';\nconst avgVolume = volumes.length > 0 ? Math.round(volumes.reduce((a, b) => a + b, 0) / volumes.length) : 'N/A';\n\n// 入力データ(銘柄情報)を保持\nconst inputItem = $('バッチ処理 (5件ずつ)').item;\n\nreturn {\n  json: {\n    symbol: inputItem.json.symbol,\n    name: inputItem.json.name,\n    market: inputItem.json.market,\n    category: inputItem.json.category,\n    currentPrice: currentPrice,\n    currency: meta.currency || 'USD',\n    dailyChange: dailyChange,\n    monthHigh: monthHigh,\n    monthLow: monthLow,\n    avgVolume: avgVolume,\n    exchange: meta.exchangeName || 'N/A',\n    fetchedAt: new Date().toISOString()\n  }\n};"
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000005",
+      "name": "株価データ整形",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, 200]
+    },
+    {
+      "parameters": {
+        "amount": 1.5,
+        "unit": "seconds"
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000006",
+      "name": "レート制限対策 (1.5秒待機)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1250, 200]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// 全銘柄のデータを集約\nconst items = $input.all();\n\nconst usStocks = [];\nconst jpStocks = [];\n\nfor (const item of items) {\n  const d = item.json;\n  const entry = `${d.name} (${d.symbol}): ${d.currentPrice} ${d.currency} [日次変動: ${d.dailyChange}%] [月間高値: ${d.monthHigh} / 安値: ${d.monthLow}] [平均出来高: ${d.avgVolume?.toLocaleString() || 'N/A'}] [カテゴリ: ${d.category}]`;\n  \n  if (d.market === 'US') {\n    usStocks.push(entry);\n  } else {\n    jpStocks.push(entry);\n  }\n}\n\nconst today = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });\n\nconst report = `=== 半導体株データレポート (${today}) ===\\n\\n` +\n  `【米国半導体株】\\n${usStocks.join('\\n')}\\n\\n` +\n  `【日本半導体株】\\n${jpStocks.join('\\n')}`;\n\nreturn [{\n  json: {\n    report: report,\n    date: new Date().toISOString(),\n    stockCount: items.length,\n    rawData: items.map(i => i.json)\n  }\n}];"
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000007",
+      "name": "全銘柄データ集約",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [750, 500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key",         "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version",  "value": "2023-06-01" },
+            { "name": "content-type",       "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 4096, messages: [{ role: 'user', content: `あなたは半導体業界の専門アナリストです。以下の半導体関連株の最新データを分析し、包括的なレポートを日本語で作成してください。\\n\\n${$json.report}\\n\\nレポートには以下を含めてください：\\n\\n1. 【セクター全体の概況】半導体セクター全体のトレンド（上昇・下降・横ばい）と背景要因\\n2. 【注目銘柄トップ5】特に注目すべき銘柄とその理由（値動き、出来高変化、カテゴリ動向）\\n3. 【カテゴリ別分析】\\n   - GPU/AI半導体\\n   - メモリ半導体\\n   - 半導体製造装置\\n   - パワー半導体/車載半導体\\n   - その他\\n4. 【日米比較】米国株と日本株の動向比較\\n5. 【リスク要因】現在の市場で注意すべきリスク\\n6. 【今後の注目ポイント】今後1-2週間で注目すべきイベントや指標\\n\\n分析は具体的な数値を引用し、プロフェッショナルなトーンで記述してください。` }] }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 60000
+        }
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000008",
+      "name": "Claude API分析",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1050, 500],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Claude APIのレスポンスからNotionページ用のデータを構築\nconst claudeResponse = $input.all()[0].json;\nconst analysisText = claudeResponse?.content?.[0]?.text || 'Claude分析の取得に失敗しました';\nconst aggregatedData = $('全銘柄データ集約').first().json;\n\nconst today = new Date();\nconst dateStr = today.toISOString().split('T')[0];\nconst titleStr = `半導体株レポート ${today.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}`;\n\n// 分析テキストをセクションに分割\nconst sections = analysisText.split(/\\n(?=【)/);\n\n// セクター全体のトレンドを判定\nlet trend = '横ばい';\nif (analysisText.includes('上昇') && analysisText.indexOf('上昇') < 500) trend = '上昇';\nelse if (analysisText.includes('下降') && analysisText.indexOf('下降') < 500) trend = '下降';\n\n// Notionのブロックを構築（2000文字制限対応）\nfunction splitTextToBlocks(text, maxLen = 1900) {\n  const blocks = [];\n  let remaining = text;\n  while (remaining.length > 0) {\n    let chunk = remaining.substring(0, maxLen);\n    // 改行位置で分割\n    if (remaining.length > maxLen) {\n      const lastNewline = chunk.lastIndexOf('\\n');\n      if (lastNewline > maxLen * 0.5) {\n        chunk = remaining.substring(0, lastNewline);\n      }\n    }\n    blocks.push({\n      object: 'block',\n      type: 'paragraph',\n      paragraph: {\n        rich_text: [{ type: 'text', text: { content: chunk } }]\n      }\n    });\n    remaining = remaining.substring(chunk.length).replace(/^\\n/, '');\n  }\n  return blocks;\n}\n\n// 個別銘柄サマリーテーブル用のデータ\nconst rawData = aggregatedData.rawData || [];\nlet stockTable = '| 銘柄 | ティッカー | 現在値 | 日次変動 | 月間高値 | 月間安値 | カテゴリ |\\n';\nstockTable += '|---|---|---|---|---|---|---|\\n';\nfor (const s of rawData) {\n  stockTable += `| ${s.name} | ${s.symbol} | ${s.currentPrice} ${s.currency} | ${s.dailyChange}% | ${s.monthHigh} | ${s.monthLow} | ${s.category} |\\n`;\n}\n\nconst notionDatabaseId = $env.NOTION_DATABASE_ID || 'YOUR_DATABASE_ID';\n\n// Notionページ作成用のペイロード\nconst notionPayload = {\n  parent: {\n    database_id: notionDatabaseId\n  },\n  icon: {\n    type: 'emoji',\n    emoji: '📊'\n  },\n  properties: {\n    'タイトル': {\n      title: [\n        { text: { content: titleStr } }\n      ]\n    },\n    '日付': {\n      date: {\n        start: dateStr\n      }\n    },\n    '市場トレンド': {\n      select: {\n        name: trend\n      }\n    },\n    '銘柄数': {\n      number: aggregatedData.stockCount || 0\n    }\n  },\n  children: [\n    {\n      object: 'block',\n      type: 'heading_1',\n      heading_1: {\n        rich_text: [{ type: 'text', text: { content: titleStr } }]\n      }\n    },\n    {\n      object: 'block',\n      type: 'callout',\n      callout: {\n        icon: { type: 'emoji', emoji: '🤖' },\n        rich_text: [{ type: 'text', text: { content: 'このレポートはn8n + Claude APIによって自動生成されています。' } }]\n      }\n    },\n    {\n      object: 'block',\n      type: 'divider',\n      divider: {}\n    },\n    ...splitTextToBlocks(analysisText),\n    {\n      object: 'block',\n      type: 'divider',\n      divider: {}\n    },\n    {\n      object: 'block',\n      type: 'heading_2',\n      heading_2: {\n        rich_text: [{ type: 'text', text: { content: '個別銘柄データ一覧' } }]\n      }\n    },\n    {\n      object: 'block',\n      type: 'paragraph',\n      paragraph: {\n        rich_text: [{ type: 'text', text: { content: stockTable.substring(0, 1900) } }]\n      }\n    },\n    ...(stockTable.length > 1900 ? [{\n      object: 'block',\n      type: 'paragraph',\n      paragraph: {\n        rich_text: [{ type: 'text', text: { content: stockTable.substring(1900, 3800) } }]\n      }\n    }] : [])\n  ]\n};\n\nreturn [{ json: notionPayload }];"
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000009",
+      "name": "Notionページ構築",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1350, 500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.notion.com/v1/pages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization",   "value": "=Bearer {{ $env.NOTION_API_KEY }}" },
+            { "name": "Notion-Version",  "value": "2022-06-28" },
+            { "name": "Content-Type",    "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000010",
+      "name": "Notionページ作成",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1650, 500],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const notionResponse = $input.all()[0].json;\nconst pageId = notionResponse.id || 'unknown';\nconst pageUrl = notionResponse.url || 'unknown';\n\nconsole.log(`Notionページが作成されました: ${pageUrl}`);\n\nreturn [{\n  json: {\n    status: 'success',\n    notionPageId: pageId,\n    notionPageUrl: pageUrl,\n    completedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000011",
+      "name": "完了ログ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1900, 500]
+    }
+  ],
+  "connections": {
+    "毎日18時に実行": {
+      "main": [
+        [
+          {
+            "node": "半導体銘柄リスト定義",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "半導体銘柄リスト定義": {
+      "main": [
+        [
+          {
+            "node": "バッチ処理 (5件ずつ)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "バッチ処理 (5件ずつ)": {
+      "main": [
+        [
+          {
+            "node": "Yahoo Finance API取得",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "全銘柄データ集約",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Yahoo Finance API取得": {
+      "main": [
+        [
+          {
+            "node": "株価データ整形",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "株価データ整形": {
+      "main": [
+        [
+          {
+            "node": "レート制限対策 (1.5秒待機)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "レート制限対策 (1.5秒待機)": {
+      "main": [
+        [
+          {
+            "node": "バッチ処理 (5件ずつ)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "全銘柄データ集約": {
+      "main": [
+        [
+          {
+            "node": "Claude API分析",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude API分析": {
+      "main": [
+        [
+          {
+            "node": "Notionページ構築",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notionページ構築": {
+      "main": [
+        [
+          {
+            "node": "Notionページ作成",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notionページ作成": {
+      "main": [
+        [
+          {
+            "node": "完了ログ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "tags": [
+    { "name": "半導体" },
+    { "name": "株式" },
+    { "name": "自動化" }
+  ],
+  "triggerCount": 1,
+  "active": false
+}
