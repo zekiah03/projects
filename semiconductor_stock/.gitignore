@@ -1,0 +1,11 @@
+# APIキーが入った.envファイルは絶対にGitに上げない
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
